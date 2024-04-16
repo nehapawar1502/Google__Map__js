@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Directions API</title>
+</head>
+
+<body>
+    <h1>Google Maps Directions API Example</h1>
+    <div id="map" style="height: 400px;"></div>
+
+    <span id="startLocation"></span>
+    <br>
+    <span id="endLocation"></span>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=Your_api_key&libraries=geometry&callback=initMap">
+        </script>
+    <script>
+
+        const coordinates_first = [
+
+            [
+                "19.9696630",
+                "73.7420540"
+            ],
+
+            // [
+            //     "off",
+            //     "off"
+            // ],
+            // [
+            //     "off",
+            //     "off"
+            // ],
+            [
+                "19.9696633",
+                "73.7420541"
+            ],
+            [
+                "19.9696642",
+                "73.7420566"
+            ],
+            [
+                "19.9696633",
+                "73.7420541"
+            ],
+            [
+                "off",
+                "off"
+            ],
+            [
+                "19.967852",
+                "73.7533448"
+            ],
+            [
+                "19.9685238",
+                "73.7586592"
+            ],
+            [
+                "19.9642467",
+                "73.7655322"
+            ],
+            [
+                "19.9662642",
+                "73.7721676"
+            ],
+            [
+                "19.9680374",
+                "73.7774603"
+            ],
+            [
+                "19.9692011",
+                "73.782553"
+            ],
+            [
+                "19.9682417",
+                "73.8024444"
+            ],
+            [
+                "off",
+                "off"
+            ],
+            [
+                "off",
+                "off"
+            ],
+            // [
+            //     "19.9740975",
+            //     "73.8288405"
+            // ],
+            [
+                "19.9751788",
+                "73.8337074"
+            ],
+            [
+                "19.9799421",
+                "73.8437919"
+            ]
+        ]
+
+
+
+        // Function to split array into chunks
+        function chunkArrayWithCondition(array, chunkSize, breakCondition) {
+            const result = [];
+            let currentChunk = [];
+
+            for (let i = 0; i < array.length; i++) {
+                const currentElement = array[i];
+
+                // Check if the break condition is met
+                if (breakCondition(currentElement)) {
+                    // If the current chunk is not empty, add it to the result
+                    if (currentChunk.length > 0) {
+                        result.push(currentChunk);
+                        currentChunk = [];
+                    }
+                } else {
+                    // Add the current element to the current chunk
+                    currentChunk.push(currentElement);
+
+                    // Check if the chunk size is reached
+                    if (currentChunk.length === chunkSize) {
+                        result.push(currentChunk);
+                        currentChunk = [];
+                    }
+                }
+            }
+
+            // If there are remaining elements in the current chunk, add it to the result
+            if (currentChunk.length > 0) {
+                result.push(currentChunk);
+            }
+
+            return result;
+        }
+        console.log("These are the original coordinates", coordinates_first)
+
+
+        // below function keeps the off value as it is and convert the lat long into the float
+
+        function convertStringPairsToList(stringPairs) {
+            return stringPairs.map(pair => {
+                const [first, second] = pair.map(value => (value === "off" ? value : parseFloat(value)));
+                return [first, second];
+            });
+        }
+
+        const coordinates = convertStringPairsToList(coordinates_first)
+
+        console.log("this are the coordinates keeping the off", coordinates)
+
+        
+        function extractCoordinatesAroundOff(stringPairs) {
+            const result = [];
+            let before = null;
+
+            for (let i = 0; i < stringPairs.length; i++) {
+                const pair = stringPairs[i];
+
+                if (pair[0] === "off" && pair[1] === "off") {
+                    if (before) {
+                        let after = null;
+                        let afterIndex = i + 1;
+
+                        // Find the first non-"off" coordinate after consecutive "off" values
+                        while (afterIndex < stringPairs.length) {
+                            const nextPair = stringPairs[afterIndex];
+                            if (nextPair[0] !== "off" || nextPair[1] !== "off") {
+                                after = [parseFloat(nextPair[0]), parseFloat(nextPair[1])];
+                                break;
+                            }
+                            afterIndex++;
+                        }
+                        if (after) {
+                            result.push([before, after]);
+                        }
+                        before = null;
+                    }
+                } else {
+                    const [lat, lon] = pair.map(parseFloat);
+                    before = [lat, lon];
+                }
+            }
+
+            return result;
+        }
+
+
+        const extracted_coord = extractCoordinatesAroundOff(coordinates)
+
+        console.log("THese are the extracted coord around off", extracted_coord)
+
+        const breakCondition = (coord) => coord[0] === "off";
+
+        // Chunk the array with the specified conditions
+        const chunkedCoordinates = chunkArrayWithCondition(coordinates, 25, breakCondition)
+
+        // Your Google Maps API Key
+        const apiKey = 'your_api_key';
+
+        let map;
+
+        // Initialize the map
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: coordinates[0][0], lng: coordinates[0][1] },
+                zoom: 13,
+            });
+
+            // Add marker for the starting coordinate
+            startMarker = new google.maps.Marker({
+                position: { lat: coordinates[0][0], lng: coordinates[0][1] },
+                map: map,
+                title: 'Starting Location',
+                icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' // Customize the icon as needed
+            });
+
+            // Add marker for the ending coordinate
+            endMarker = new google.maps.Marker({
+                position: { lat: coordinates[coordinates.length - 1][0], lng: coordinates[coordinates.length - 1][1] },
+                map: map,
+                title: 'Ending Location',
+                icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' // Customize the icon as needed
+            });
+            // coordinates.forEach(coord => {
+            //     new google.maps.Marker({
+            //         position: { lat: coord[0], lng: coord[1] },
+            //         map: map,
+            //         title: `${coord[0]}, ${coord[1]}`
+            //     });
+            // });
+
+            // Loop through each chunk of coordinates and draw the route
+            chunkedCoordinates.forEach(async (chunk, index) => {
+                console.log(`Request ${index + 1}:`);
+                //  await snapToRoads(chunk)
+                 await drawRoute(map, chunk)
+            });
+
+            drawPolylines(map, extracted_coord);
+        }
+
+
+        // Function to draw the route on the map
+        async function drawRoute(map, waypoints) {
+
+            const startLocation = await getAddressesForCoordinates(coordinates[0]);
+            const endLocation = await getAddressesForCoordinates(coordinates[coordinates.length - 1]);
+            // Update the table cells with the addresses
+            document.getElementById('startLocation').textContent = startLocation;
+            document.getElementById('endLocation').textContent = endLocation;
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer({ map, suppressMarkers: false });
+
+            try {
+                const originLatLng = new google.maps.LatLng(waypoints[0][0], waypoints[0][1]);
+                const destinationLatLng = new google.maps.LatLng(waypoints[waypoints.length - 1][0], waypoints[waypoints.length - 1][1]);
+                const waypointLatLngs = waypoints.slice(1, -1).map(waypoint => new google.maps.LatLng(waypoint[0], waypoint[1]));
+
+                const response = await directionsService.route({
+                    origin: originLatLng,
+                    destination: destinationLatLng,
+                    waypoints: waypointLatLngs.map(waypointLatLng => ({ location: waypointLatLng })),
+                    optimizeWaypoints: true,
+                    travelMode: 'WALKING',
+                });
+
+                directionsRenderer.setDirections(response);
+            } catch (error) {
+                console.error('Directions Service Error:', error);
+            }
+        }
+
+        
+        function drawPolylines(map, extractedCoordinates) {
+            extractedCoordinates.forEach(coordinatePair => {
+                const polylineCoordinates = coordinatePair.map(coord => new google.maps.LatLng(coord[0], coord[1]));
+
+                const polyline = new google.maps.Polyline({
+                    path: polylineCoordinates,
+                    geodesic: true,
+                    strokeColor: '#808080', // Adjust the color as needed
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3,
+                });
+
+                polyline.setMap(map);
+            });
+        }
+
+        async function getAddressesForCoordinates(coord) {
+
+            const geocoder = new google.maps.Geocoder();
+            return new Promise((resolve, reject) => {
+                geocoder.geocode({ location: { lat: coord[0], lng: coord[1] } }, (results, status) => {
+                    if (status === 'OK') {
+                        resolve(results[0].formatted_address);
+                    } else {
+                        console.error('Geocoding error:', status);
+                        reject('Address not found');
+                    }
+                });
+            });
+        }
+
+
+        console.log("executed")
+
+    </script>
+
+</body>
+
+</html>

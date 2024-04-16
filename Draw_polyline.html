@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Draw Polyline</title>
+  <!-- Replace your api key with the Your_api_key -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=Your_api_key&callback=initMap" async defer></script>
+  <script>
+    let map;
+
+    function initMap() {
+      // Initialize map
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 0, lng: 0 },
+        zoom: 3
+      });
+      
+
+      // Define the coordinates for the polyline
+      const coordinates = [
+        { lat: 19.9696633, lng: 73.7420541 }, 
+        { lat: 19.9696642, lng: 73.7420566 }, 
+        { lat: 19.9696633, lng: 73.7420541 } 
+       
+      ];
+
+      // Create a polyline object and set its path and options
+      const polyline = new google.maps.Polyline({
+        path: coordinates,
+        geodesic: true,
+        strokeColor: '#FF0000', // Red color
+        strokeOpacity: 1.0,
+        strokeWeight: 2 // Width of the polyline
+      });
+
+      // Set the polyline on the map
+      polyline.setMap(map);
+    }
+  </script>
+</head>
+<body>
+  <div id="map" style="height: 400px;"></div>
+</body>
+</html>
